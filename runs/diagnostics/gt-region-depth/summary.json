@@ -1,0 +1,43 @@
+{
+  "frames": 1,
+  "optimized": 1,
+  "skipped_out_of_fov": 0,
+  "mean_time_s": 0.7911172000167426,
+  "mean_correspondences": 751.0,
+  "dice_left_shaft": 0.9774011373519897,
+  "dice_left_wrist": 0.9874341487884521,
+  "dice_left_grippers": 0.9843431115150452,
+  "dice_right_shaft": 0.9956890344619751,
+  "dice_right_wrist": 0.9870563745498657,
+  "dice_right_grippers": 0.9894859790802002,
+  "dice_mean": 0.9869016309579214,
+  "dice_left_mean": 0.9830594658851624,
+  "dice_right_mean": 0.9907437960306803,
+  "left_translation_error_mm": 0.3018542528152466,
+  "left_rotation_error_deg": 0.817570686340332,
+  "left_joints_mae_deg": 0.0,
+  "right_translation_error_mm": 0.39214643836021423,
+  "right_rotation_error_deg": 0.3753441870212555,
+  "right_joints_mae_deg": 0.0,
+  "initial_dice_mean": 0.9738495250542959,
+  "initial_left_translation_error_mm": 0.0,
+  "initial_left_rotation_error_deg": 0.0,
+  "initial_left_joints_mae_deg": 0.0,
+  "initial_right_translation_error_mm": 0.0,
+  "initial_right_rotation_error_deg": 0.0,
+  "initial_right_joints_mae_deg": 0.0,
+  "mean_region_correspondences": 151.0,
+  "mean_depth_correspondences": 600.0,
+  "timing_mean_s": {
+    "total_s": 0.6095444000093266,
+    "render_s": 0.02624800003832206,
+    "correspondence_s": 0.354222900030436,
+    "solve_s": 0.2168027999869082
+  },
+  "elapsed_s": 1.5404811000043992,
+  "method": "icgplus",
+  "output": "runs\\diagnostics\\gt-region-depth",
+  "runs": [
+    "run_1789376009_gpu1_env0"
+  ]
+}

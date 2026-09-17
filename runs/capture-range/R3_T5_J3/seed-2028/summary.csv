@@ -1,0 +1,2 @@
+run,frame,optimized,skipped,init,time_s,correspondences,dice_mean,dice_left_mean,dice_right_mean,dice_left_shaft,dice_left_wrist,dice_left_grippers,dice_right_shaft,dice_right_wrist,dice_right_grippers,left_translation_error_mm,left_rotation_error_deg,right_translation_error_mm,right_rotation_error_deg
+run_1789376009_gpu1_env0,0,0,,perturb-gt,0.2527049999916926,27,0.13055345276370645,0.0,0.2611069055274129,0.0,0.0,0.0,0.46702995896339417,0.3077593743801117,0.008531383238732815,10.1588716506958,4.212310791015625,4.76243257522583,3.8605690002441406

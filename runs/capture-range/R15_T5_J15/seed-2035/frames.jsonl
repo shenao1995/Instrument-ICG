@@ -1,0 +1,1 @@
+{"run": "run_1789376009_gpu1_env0", "frame": 0, "init": {"visible": false, "init": "perturb-gt", "pixels": [0, 4877], "rotation_deg": 15.0, "translation_mm": 5.0, "joints_deg": 15.0, "seed": 2035}, "optimized": false, "skipped": "out_of_fov", "time_s": 0.13676199998008087}

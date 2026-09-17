@@ -1,0 +1,43 @@
+{
+  "frames": 1,
+  "optimized": 0,
+  "skipped_out_of_fov": 0,
+  "mean_time_s": 0.2663757000118494,
+  "mean_correspondences": 12.0,
+  "dice_left_shaft": 0.0883977934718132,
+  "dice_left_wrist": 0.13593749701976776,
+  "dice_left_grippers": 0.004129387438297272,
+  "dice_right_shaft": 0.2470002919435501,
+  "dice_right_wrist": 0.0,
+  "dice_right_grippers": 0.0,
+  "dice_mean": 0.0792441616455714,
+  "dice_left_mean": 0.07615489264329274,
+  "dice_right_mean": 0.08233343064785004,
+  "left_translation_error_mm": 5.688634872436523,
+  "left_rotation_error_deg": 11.218981742858887,
+  "left_joints_mae_deg": 6.157668590545654,
+  "right_translation_error_mm": 9.974184036254883,
+  "right_rotation_error_deg": 15.812701225280762,
+  "right_joints_mae_deg": 8.682055473327637,
+  "initial_dice_mean": 0.0792441616455714,
+  "initial_left_translation_error_mm": 5.688634872436523,
+  "initial_left_rotation_error_deg": 11.218981742858887,
+  "initial_left_joints_mae_deg": 6.157668590545654,
+  "initial_right_translation_error_mm": 9.974184036254883,
+  "initial_right_rotation_error_deg": 15.812701225280762,
+  "initial_right_joints_mae_deg": 8.682055473327637,
+  "mean_region_correspondences": 7.0,
+  "mean_depth_correspondences": 5.0,
+  "timing_mean_s": {
+    "total_s": 0.08231519997934811,
+    "render_s": 0.011610300047323108,
+    "correspondence_s": 0.05955000000540167,
+    "solve_s": 0.0011297999881207943
+  },
+  "elapsed_s": 0.9916547000175342,
+  "method": "mbicg",
+  "output": "runs\\capture-range\\R10_T5_J10\\seed-2034",
+  "runs": [
+    "run_1789376009_gpu1_env0"
+  ]
+}

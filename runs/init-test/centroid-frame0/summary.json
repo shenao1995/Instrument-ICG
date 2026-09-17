@@ -1,0 +1,43 @@
+{
+  "frames": 1,
+  "optimized": 0,
+  "skipped_out_of_fov": 1,
+  "mean_time_s": null,
+  "mean_correspondences": null,
+  "dice_left_shaft": null,
+  "dice_left_wrist": null,
+  "dice_left_grippers": null,
+  "dice_right_shaft": null,
+  "dice_right_wrist": null,
+  "dice_right_grippers": null,
+  "dice_mean": null,
+  "dice_left_mean": null,
+  "dice_right_mean": null,
+  "left_translation_error_mm": null,
+  "left_rotation_error_deg": null,
+  "left_joints_mae_deg": null,
+  "right_translation_error_mm": null,
+  "right_rotation_error_deg": null,
+  "right_joints_mae_deg": null,
+  "initial_dice_mean": null,
+  "initial_left_translation_error_mm": null,
+  "initial_left_rotation_error_deg": null,
+  "initial_left_joints_mae_deg": null,
+  "initial_right_translation_error_mm": null,
+  "initial_right_rotation_error_deg": null,
+  "initial_right_joints_mae_deg": null,
+  "mean_region_correspondences": null,
+  "mean_depth_correspondences": null,
+  "timing_mean_s": {
+    "total_s": null,
+    "render_s": null,
+    "correspondence_s": null,
+    "solve_s": null
+  },
+  "elapsed_s": 0.8579629999876488,
+  "method": "mbicg",
+  "output": "runs\\init-test\\centroid-frame0",
+  "runs": [
+    "run_1789376009_gpu1_env0"
+  ]
+}

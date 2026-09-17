@@ -1,0 +1,998 @@
+[
+  {
+    "corr_iteration": 0,
+    "scale": 1,
+    "residual_sigma_px": 25.0,
+    "correspondences": {
+      "total": 0,
+      "left_shaft": 0,
+      "left_wrist": 0,
+      "left_grippers": 0,
+      "right_shaft": 0,
+      "right_wrist": 0,
+      "right_grippers": 0
+    },
+    "region_correspondences": {
+      "total": 0,
+      "left_shaft": 0,
+      "left_wrist": 0,
+      "left_grippers": 0,
+      "right_shaft": 0,
+      "right_wrist": 0,
+      "right_grippers": 0
+    },
+    "depth_correspondences": {
+      "total": 590,
+      "left_shaft": 100,
+      "left_wrist": 100,
+      "left_grippers": 100,
+      "right_shaft": 96,
+      "right_wrist": 97,
+      "right_grippers": 97
+    },
+    "depth_search": {
+      "sampled": 600,
+      "accepted": 590,
+      "rejected": {
+        "no_valid_semantic_depth": 7,
+        "measured_occlusion": 2,
+        "outside_image": 1
+      }
+    },
+    "region_residual_before": {
+      "raw_cost": 0.0,
+      "robust_cost": 0.0,
+      "mean_abs_px": null,
+      "median_abs_px": null,
+      "p90_abs_px": null,
+      "max_abs_px": null
+    },
+    "depth_residual_before": {
+      "raw_cost": 22.503537828923303,
+      "robust_cost": 22.3814574964446,
+      "mean_abs_mm": 0.41947718774382764,
+      "median_abs_mm": 0.3337407460391625,
+      "p90_abs_mm": 0.8900698806458113,
+      "max_abs_mm": 2.9882523259925162
+    },
+    "updates": [
+      {
+        "cost_before": 22.3814574964446,
+        "cost_after": 11.248648376205784,
+        "raw_cost_before": 22.503537828923303,
+        "raw_cost_after": 11.324801599326275,
+        "accepted": true,
+        "lm_lambda_before": 0.01,
+        "lm_lambda_after": 0.005,
+        "lm_retries": 0,
+        "residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "attempts": [
+          {
+            "lm_lambda": 0.01,
+            "candidate_cost": 11.248648376205784,
+            "accepted": true
+          }
+        ],
+        "total_cost_before": 22.3814574964446,
+        "total_cost_after": 11.248648376205784,
+        "region_cost_before": 0.0,
+        "region_cost_after": 0.0,
+        "depth_cost_before": 22.3814574964446,
+        "depth_cost_after": 11.248648376205784,
+        "region_residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "region_residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "depth_residual_before": {
+          "raw_cost": 22.503537828923303,
+          "robust_cost": 22.3814574964446,
+          "mean_abs_mm": 0.41947718774382764,
+          "median_abs_mm": 0.3337407460391625,
+          "p90_abs_mm": 0.8900698806458113,
+          "max_abs_mm": 2.9882523259925162
+        },
+        "depth_residual_after": {
+          "raw_cost": 11.324801599326275,
+          "robust_cost": 11.248648376205784,
+          "mean_abs_mm": 0.2746058137367134,
+          "median_abs_mm": 0.20328212037616689,
+          "p90_abs_mm": 0.5831419553469601,
+          "max_abs_mm": 2.7805291698353907
+        },
+        "depth_residual": {
+          "raw_cost": 11.324801599326275,
+          "robust_cost": 11.248648376205784,
+          "mean_abs_mm": 0.2746058137367134,
+          "median_abs_mm": 0.20328212037616689,
+          "p90_abs_mm": 0.5831419553469601,
+          "max_abs_mm": 2.7805291698353907
+        },
+        "left": {
+          "rotation_step_deg": 1.661938111498911,
+          "translation_step_mm": 0.4733511668073077,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "right": {
+          "rotation_step_deg": 2.675378629881589,
+          "translation_step_mm": 0.893045865329088,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "update_iteration": 0,
+        "relative_cost_reduction": 0.4974121601333298,
+        "early_stop_streak": 0
+      },
+      {
+        "cost_before": 11.248648376205784,
+        "cost_after": 11.167165685607225,
+        "raw_cost_before": 11.324801599326275,
+        "raw_cost_after": 11.238252889084483,
+        "accepted": true,
+        "lm_lambda_before": 0.005,
+        "lm_lambda_after": 0.0025,
+        "lm_retries": 0,
+        "residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "attempts": [
+          {
+            "lm_lambda": 0.005,
+            "candidate_cost": 11.167165685607225,
+            "accepted": true
+          }
+        ],
+        "total_cost_before": 11.248648376205784,
+        "total_cost_after": 11.167165685607225,
+        "region_cost_before": 0.0,
+        "region_cost_after": 0.0,
+        "depth_cost_before": 11.248648376205784,
+        "depth_cost_after": 11.167165685607225,
+        "region_residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "region_residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "depth_residual_before": {
+          "raw_cost": 11.324801599326275,
+          "robust_cost": 11.248648376205784,
+          "mean_abs_mm": 0.2746058137367134,
+          "median_abs_mm": 0.20328212037616689,
+          "p90_abs_mm": 0.5831419553469601,
+          "max_abs_mm": 2.7805291698353907
+        },
+        "depth_residual_after": {
+          "raw_cost": 11.238252889084483,
+          "robust_cost": 11.167165685607225,
+          "mean_abs_mm": 0.2737613896774974,
+          "median_abs_mm": 0.197007746923509,
+          "p90_abs_mm": 0.6003487585074954,
+          "max_abs_mm": 2.754120433232031
+        },
+        "depth_residual": {
+          "raw_cost": 11.238252889084483,
+          "robust_cost": 11.167165685607225,
+          "mean_abs_mm": 0.2737613896774974,
+          "median_abs_mm": 0.197007746923509,
+          "p90_abs_mm": 0.6003487585074954,
+          "max_abs_mm": 2.754120433232031
+        },
+        "left": {
+          "rotation_step_deg": 0.6489365014725451,
+          "translation_step_mm": 0.020115078464018856,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "right": {
+          "rotation_step_deg": 0.9081811293566893,
+          "translation_step_mm": 0.06550000958652412,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "update_iteration": 1,
+        "relative_cost_reduction": 0.0072437761296654125,
+        "early_stop_streak": 0
+      }
+    ]
+  },
+  {
+    "corr_iteration": 1,
+    "scale": 1,
+    "residual_sigma_px": 15.0,
+    "correspondences": {
+      "total": 0,
+      "left_shaft": 0,
+      "left_wrist": 0,
+      "left_grippers": 0,
+      "right_shaft": 0,
+      "right_wrist": 0,
+      "right_grippers": 0
+    },
+    "region_correspondences": {
+      "total": 0,
+      "left_shaft": 0,
+      "left_wrist": 0,
+      "left_grippers": 0,
+      "right_shaft": 0,
+      "right_wrist": 0,
+      "right_grippers": 0
+    },
+    "depth_correspondences": {
+      "total": 600,
+      "left_shaft": 100,
+      "left_wrist": 100,
+      "left_grippers": 100,
+      "right_shaft": 100,
+      "right_wrist": 100,
+      "right_grippers": 100
+    },
+    "depth_search": {
+      "sampled": 600,
+      "accepted": 600,
+      "rejected": {}
+    },
+    "region_residual_before": {
+      "raw_cost": 0.0,
+      "robust_cost": 0.0,
+      "mean_abs_px": null,
+      "median_abs_px": null,
+      "p90_abs_px": null,
+      "max_abs_px": null
+    },
+    "depth_residual_before": {
+      "raw_cost": 6.224221624525128,
+      "robust_cost": 6.224221624525128,
+      "mean_abs_mm": 0.20540441494674755,
+      "median_abs_mm": 0.14654508624097778,
+      "p90_abs_mm": 0.48103156737053543,
+      "max_abs_mm": 0.9862715094756808
+    },
+    "updates": [
+      {
+        "cost_before": 6.224221624525128,
+        "cost_after": 3.8377678745378643,
+        "raw_cost_before": 6.224221624525128,
+        "raw_cost_after": 3.8377678745378643,
+        "accepted": true,
+        "lm_lambda_before": 0.0025,
+        "lm_lambda_after": 0.00125,
+        "lm_retries": 0,
+        "residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "attempts": [
+          {
+            "lm_lambda": 0.0025,
+            "candidate_cost": 3.8377678745378643,
+            "accepted": true
+          }
+        ],
+        "total_cost_before": 6.224221624525128,
+        "total_cost_after": 3.8377678745378643,
+        "region_cost_before": 0.0,
+        "region_cost_after": 0.0,
+        "depth_cost_before": 6.224221624525128,
+        "depth_cost_after": 3.8377678745378643,
+        "region_residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "region_residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "depth_residual_before": {
+          "raw_cost": 6.224221624525128,
+          "robust_cost": 6.224221624525128,
+          "mean_abs_mm": 0.20540441494674755,
+          "median_abs_mm": 0.14654508624097778,
+          "p90_abs_mm": 0.48103156737053543,
+          "max_abs_mm": 0.9862715094756808
+        },
+        "depth_residual_after": {
+          "raw_cost": 3.8377678745378643,
+          "robust_cost": 3.8377678745378643,
+          "mean_abs_mm": 0.1608749275252507,
+          "median_abs_mm": 0.11278346827591369,
+          "p90_abs_mm": 0.37711865093215524,
+          "max_abs_mm": 1.2106315067767928
+        },
+        "depth_residual": {
+          "raw_cost": 3.8377678745378643,
+          "robust_cost": 3.8377678745378643,
+          "mean_abs_mm": 0.1608749275252507,
+          "median_abs_mm": 0.11278346827591369,
+          "p90_abs_mm": 0.37711865093215524,
+          "max_abs_mm": 1.2106315067767928
+        },
+        "left": {
+          "rotation_step_deg": 0.34231234906046915,
+          "translation_step_mm": 0.18443091041324355,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "right": {
+          "rotation_step_deg": 0.9456564112898671,
+          "translation_step_mm": 0.458585287232423,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "update_iteration": 0,
+        "relative_cost_reduction": 0.38341400643318774,
+        "early_stop_streak": 0
+      },
+      {
+        "cost_before": 3.8377678745378643,
+        "cost_after": 3.8349935792829606,
+        "raw_cost_before": 3.8377678745378643,
+        "raw_cost_after": 3.8349935792829606,
+        "accepted": true,
+        "lm_lambda_before": 0.00125,
+        "lm_lambda_after": 0.000625,
+        "lm_retries": 0,
+        "residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "attempts": [
+          {
+            "lm_lambda": 0.00125,
+            "candidate_cost": 3.8349935792829606,
+            "accepted": true
+          }
+        ],
+        "total_cost_before": 3.8377678745378643,
+        "total_cost_after": 3.8349935792829606,
+        "region_cost_before": 0.0,
+        "region_cost_after": 0.0,
+        "depth_cost_before": 3.8377678745378643,
+        "depth_cost_after": 3.8349935792829606,
+        "region_residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "region_residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "depth_residual_before": {
+          "raw_cost": 3.8377678745378643,
+          "robust_cost": 3.8377678745378643,
+          "mean_abs_mm": 0.1608749275252507,
+          "median_abs_mm": 0.11278346827591369,
+          "p90_abs_mm": 0.37711865093215524,
+          "max_abs_mm": 1.2106315067767928
+        },
+        "depth_residual_after": {
+          "raw_cost": 3.8349935792829606,
+          "robust_cost": 3.8349935792829606,
+          "mean_abs_mm": 0.16086723145982243,
+          "median_abs_mm": 0.11276591811594733,
+          "p90_abs_mm": 0.376308794047534,
+          "max_abs_mm": 1.2167886145227222
+        },
+        "depth_residual": {
+          "raw_cost": 3.8349935792829606,
+          "robust_cost": 3.8349935792829606,
+          "mean_abs_mm": 0.16086723145982243,
+          "median_abs_mm": 0.11276591811594733,
+          "p90_abs_mm": 0.376308794047534,
+          "max_abs_mm": 1.2167886145227222
+        },
+        "left": {
+          "rotation_step_deg": 0.07894660468172876,
+          "translation_step_mm": 0.0027977834246233377,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "right": {
+          "rotation_step_deg": 0.1618708577888592,
+          "translation_step_mm": 0.014601479205425146,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "update_iteration": 1,
+        "relative_cost_reduction": 0.0007228929277641019,
+        "early_stop_streak": 0
+      }
+    ]
+  },
+  {
+    "corr_iteration": 2,
+    "scale": 1,
+    "residual_sigma_px": 10.0,
+    "correspondences": {
+      "total": 0,
+      "left_shaft": 0,
+      "left_wrist": 0,
+      "left_grippers": 0,
+      "right_shaft": 0,
+      "right_wrist": 0,
+      "right_grippers": 0
+    },
+    "region_correspondences": {
+      "total": 0,
+      "left_shaft": 0,
+      "left_wrist": 0,
+      "left_grippers": 0,
+      "right_shaft": 0,
+      "right_wrist": 0,
+      "right_grippers": 0
+    },
+    "depth_correspondences": {
+      "total": 599,
+      "left_shaft": 100,
+      "left_wrist": 100,
+      "left_grippers": 100,
+      "right_shaft": 100,
+      "right_wrist": 99,
+      "right_grippers": 100
+    },
+    "depth_search": {
+      "sampled": 600,
+      "accepted": 599,
+      "rejected": {
+        "rendered_occlusion": 1
+      }
+    },
+    "region_residual_before": {
+      "raw_cost": 0.0,
+      "robust_cost": 0.0,
+      "mean_abs_px": null,
+      "median_abs_px": null,
+      "p90_abs_px": null,
+      "max_abs_px": null
+    },
+    "depth_residual_before": {
+      "raw_cost": 3.367277977865002,
+      "robust_cost": 3.367277977865002,
+      "mean_abs_mm": 0.1508461833824473,
+      "median_abs_mm": 0.10536211152737679,
+      "p90_abs_mm": 0.383316478441923,
+      "max_abs_mm": 0.9157785102049775
+    },
+    "updates": [
+      {
+        "cost_before": 3.367277977865002,
+        "cost_after": 2.339811152764284,
+        "raw_cost_before": 3.367277977865002,
+        "raw_cost_after": 2.339811152764284,
+        "accepted": true,
+        "lm_lambda_before": 0.000625,
+        "lm_lambda_after": 0.0003125,
+        "lm_retries": 0,
+        "residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "attempts": [
+          {
+            "lm_lambda": 0.000625,
+            "candidate_cost": 2.339811152764284,
+            "accepted": true
+          }
+        ],
+        "total_cost_before": 3.367277977865002,
+        "total_cost_after": 2.339811152764284,
+        "region_cost_before": 0.0,
+        "region_cost_after": 0.0,
+        "depth_cost_before": 3.367277977865002,
+        "depth_cost_after": 2.339811152764284,
+        "region_residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "region_residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "depth_residual_before": {
+          "raw_cost": 3.367277977865002,
+          "robust_cost": 3.367277977865002,
+          "mean_abs_mm": 0.1508461833824473,
+          "median_abs_mm": 0.10536211152737679,
+          "p90_abs_mm": 0.383316478441923,
+          "max_abs_mm": 0.9157785102049775
+        },
+        "depth_residual_after": {
+          "raw_cost": 2.339811152764284,
+          "robust_cost": 2.339811152764284,
+          "mean_abs_mm": 0.13258519571293673,
+          "median_abs_mm": 0.10072698993464038,
+          "p90_abs_mm": 0.30371730088833926,
+          "max_abs_mm": 0.6776102592755081
+        },
+        "depth_residual": {
+          "raw_cost": 2.339811152764284,
+          "robust_cost": 2.339811152764284,
+          "mean_abs_mm": 0.13258519571293673,
+          "median_abs_mm": 0.10072698993464038,
+          "p90_abs_mm": 0.30371730088833926,
+          "max_abs_mm": 0.6776102592755081
+        },
+        "left": {
+          "rotation_step_deg": 0.2574337697376769,
+          "translation_step_mm": 0.08593508219491662,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "right": {
+          "rotation_step_deg": 0.7544715343155721,
+          "translation_step_mm": 0.2763017168283317,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "update_iteration": 0,
+        "relative_cost_reduction": 0.30513276060213357,
+        "early_stop_streak": 0
+      },
+      {
+        "cost_before": 2.339811152764284,
+        "cost_after": 2.3378272993413822,
+        "raw_cost_before": 2.339811152764284,
+        "raw_cost_after": 2.3378272993413822,
+        "accepted": true,
+        "lm_lambda_before": 0.0003125,
+        "lm_lambda_after": 0.00015625,
+        "lm_retries": 0,
+        "residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "attempts": [
+          {
+            "lm_lambda": 0.0003125,
+            "candidate_cost": 2.3378272993413822,
+            "accepted": true
+          }
+        ],
+        "total_cost_before": 2.339811152764284,
+        "total_cost_after": 2.3378272993413822,
+        "region_cost_before": 0.0,
+        "region_cost_after": 0.0,
+        "depth_cost_before": 2.339811152764284,
+        "depth_cost_after": 2.3378272993413822,
+        "region_residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "region_residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "depth_residual_before": {
+          "raw_cost": 2.339811152764284,
+          "robust_cost": 2.339811152764284,
+          "mean_abs_mm": 0.13258519571293673,
+          "median_abs_mm": 0.10072698993464038,
+          "p90_abs_mm": 0.30371730088833926,
+          "max_abs_mm": 0.6776102592755081
+        },
+        "depth_residual_after": {
+          "raw_cost": 2.3378272993413822,
+          "robust_cost": 2.3378272993413822,
+          "mean_abs_mm": 0.13253051062423585,
+          "median_abs_mm": 0.10055725775276922,
+          "p90_abs_mm": 0.30382871452863935,
+          "max_abs_mm": 0.679371887294676
+        },
+        "depth_residual": {
+          "raw_cost": 2.3378272993413822,
+          "robust_cost": 2.3378272993413822,
+          "mean_abs_mm": 0.13253051062423585,
+          "median_abs_mm": 0.10055725775276922,
+          "p90_abs_mm": 0.30382871452863935,
+          "max_abs_mm": 0.679371887294676
+        },
+        "left": {
+          "rotation_step_deg": 0.086756441923715,
+          "translation_step_mm": 0.0019335113807385932,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "right": {
+          "rotation_step_deg": 0.14749078771670548,
+          "translation_step_mm": 0.00890947153588053,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "update_iteration": 1,
+        "relative_cost_reduction": 0.0008478690344551945,
+        "early_stop_streak": 0
+      }
+    ]
+  },
+  {
+    "corr_iteration": 3,
+    "scale": 1,
+    "residual_sigma_px": 10.0,
+    "correspondences": {
+      "total": 0,
+      "left_shaft": 0,
+      "left_wrist": 0,
+      "left_grippers": 0,
+      "right_shaft": 0,
+      "right_wrist": 0,
+      "right_grippers": 0
+    },
+    "region_correspondences": {
+      "total": 0,
+      "left_shaft": 0,
+      "left_wrist": 0,
+      "left_grippers": 0,
+      "right_shaft": 0,
+      "right_wrist": 0,
+      "right_grippers": 0
+    },
+    "depth_correspondences": {
+      "total": 599,
+      "left_shaft": 100,
+      "left_wrist": 99,
+      "left_grippers": 100,
+      "right_shaft": 100,
+      "right_wrist": 100,
+      "right_grippers": 100
+    },
+    "depth_search": {
+      "sampled": 600,
+      "accepted": 599,
+      "rejected": {
+        "rendered_occlusion": 1
+      }
+    },
+    "region_residual_before": {
+      "raw_cost": 0.0,
+      "robust_cost": 0.0,
+      "mean_abs_px": null,
+      "median_abs_px": null,
+      "p90_abs_px": null,
+      "max_abs_px": null
+    },
+    "depth_residual_before": {
+      "raw_cost": 2.1568813396088773,
+      "robust_cost": 2.1568813396088773,
+      "mean_abs_mm": 0.12781084446285812,
+      "median_abs_mm": 0.09365410634679619,
+      "p90_abs_mm": 0.29481450075239707,
+      "max_abs_mm": 0.6206396863965117
+    },
+    "updates": [
+      {
+        "cost_before": 2.1568813396088773,
+        "cost_after": 1.9232888453947,
+        "raw_cost_before": 2.1568813396088773,
+        "raw_cost_after": 1.9232888453947,
+        "accepted": true,
+        "lm_lambda_before": 0.00015625,
+        "lm_lambda_after": 7.8125e-05,
+        "lm_retries": 0,
+        "residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "attempts": [
+          {
+            "lm_lambda": 0.00015625,
+            "candidate_cost": 1.9232888453947,
+            "accepted": true
+          }
+        ],
+        "total_cost_before": 2.1568813396088773,
+        "total_cost_after": 1.9232888453947,
+        "region_cost_before": 0.0,
+        "region_cost_after": 0.0,
+        "depth_cost_before": 2.1568813396088773,
+        "depth_cost_after": 1.9232888453947,
+        "region_residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "region_residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "depth_residual_before": {
+          "raw_cost": 2.1568813396088773,
+          "robust_cost": 2.1568813396088773,
+          "mean_abs_mm": 0.12781084446285812,
+          "median_abs_mm": 0.09365410634679619,
+          "p90_abs_mm": 0.29481450075239707,
+          "max_abs_mm": 0.6206396863965117
+        },
+        "depth_residual_after": {
+          "raw_cost": 1.9232888453947,
+          "robust_cost": 1.9232888453947,
+          "mean_abs_mm": 0.11922633193535445,
+          "median_abs_mm": 0.08356654543391179,
+          "p90_abs_mm": 0.2802726655093877,
+          "max_abs_mm": 0.577015217821477
+        },
+        "depth_residual": {
+          "raw_cost": 1.9232888453947,
+          "robust_cost": 1.9232888453947,
+          "mean_abs_mm": 0.11922633193535445,
+          "median_abs_mm": 0.08356654543391179,
+          "p90_abs_mm": 0.2802726655093877,
+          "max_abs_mm": 0.577015217821477
+        },
+        "left": {
+          "rotation_step_deg": 0.34759354954774174,
+          "translation_step_mm": 0.029439575955747088,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "right": {
+          "rotation_step_deg": 0.10001087711367486,
+          "translation_step_mm": 0.12501154986305943,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "update_iteration": 0,
+        "relative_cost_reduction": 0.1083010409170383,
+        "early_stop_streak": 0
+      },
+      {
+        "cost_before": 1.9232888453947,
+        "cost_after": 1.9223422672865942,
+        "raw_cost_before": 1.9232888453947,
+        "raw_cost_after": 1.9223422672865942,
+        "accepted": true,
+        "lm_lambda_before": 7.8125e-05,
+        "lm_lambda_after": 3.90625e-05,
+        "lm_retries": 0,
+        "residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "attempts": [
+          {
+            "lm_lambda": 7.8125e-05,
+            "candidate_cost": 1.9223422672865942,
+            "accepted": true
+          }
+        ],
+        "total_cost_before": 1.9232888453947,
+        "total_cost_after": 1.9223422672865942,
+        "region_cost_before": 0.0,
+        "region_cost_after": 0.0,
+        "depth_cost_before": 1.9232888453947,
+        "depth_cost_after": 1.9223422672865942,
+        "region_residual_before": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "region_residual_after": {
+          "raw_cost": 0.0,
+          "robust_cost": 0.0,
+          "mean_abs_px": null,
+          "median_abs_px": null,
+          "p90_abs_px": null,
+          "max_abs_px": null
+        },
+        "depth_residual_before": {
+          "raw_cost": 1.9232888453947,
+          "robust_cost": 1.9232888453947,
+          "mean_abs_mm": 0.11922633193535445,
+          "median_abs_mm": 0.08356654543391179,
+          "p90_abs_mm": 0.2802726655093877,
+          "max_abs_mm": 0.577015217821477
+        },
+        "depth_residual_after": {
+          "raw_cost": 1.9223422672865942,
+          "robust_cost": 1.9223422672865942,
+          "mean_abs_mm": 0.11934683609412744,
+          "median_abs_mm": 0.08492607564191874,
+          "p90_abs_mm": 0.28057187590491833,
+          "max_abs_mm": 0.5773663424935948
+        },
+        "depth_residual": {
+          "raw_cost": 1.9223422672865942,
+          "robust_cost": 1.9223422672865942,
+          "mean_abs_mm": 0.11934683609412744,
+          "median_abs_mm": 0.08492607564191874,
+          "p90_abs_mm": 0.28057187590491833,
+          "max_abs_mm": 0.5773663424935948
+        },
+        "left": {
+          "rotation_step_deg": 0.13654084155205556,
+          "translation_step_mm": 0.002095904574986385,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "right": {
+          "rotation_step_deg": 0.00991868416511091,
+          "translation_step_mm": 0.0004055117957830961,
+          "alpha_step_deg": 0.0,
+          "theta_left_step_deg": 0.0,
+          "theta_right_step_deg": 0.0
+        },
+        "update_iteration": 1,
+        "relative_cost_reduction": 0.0004921663796742211,
+        "early_stop_streak": 0
+      }
+    ]
+  }
+]

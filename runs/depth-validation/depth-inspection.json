@@ -1,0 +1,77 @@
+{
+  "selected_scale": null,
+  "notice": "No scale selected or persisted. Choose --depth-scale explicitly from these results.",
+  "results": [
+    {
+      "run": "run_1789376009_gpu1_env0",
+      "frame": 0,
+      "camera": "left",
+      "source": "data\\simulated_data\\data30\\run_1789376009_gpu1_env0\\depth\\0000.png",
+      "raw": {
+        "dtype": "uint16",
+        "shape": [
+          720,
+          1280
+        ],
+        "min": 0.0,
+        "max": 75.0,
+        "nonzero_min": 53.0,
+        "nonzero_max": 75.0,
+        "median": 60.0,
+        "percentiles": {
+          "p1": 53.0,
+          "p10": 55.0,
+          "p50": 60.0,
+          "p90": 69.0,
+          "p99": 73.0
+        },
+        "valid_pixels": 51268,
+        "invalid_pixels": 870332
+      },
+      "candidates": [
+        {
+          "scale": 1.0,
+          "valid_pixels": 7863,
+          "median_abs_depth_error_m": 58.94082651659846,
+          "mean_abs_depth_error_m": 60.586561761244525,
+          "p90_abs_depth_error_m": 67.93183563202619
+        },
+        {
+          "scale": 0.1,
+          "valid_pixels": 7863,
+          "median_abs_depth_error_m": 5.840826516598463,
+          "mean_abs_depth_error_m": 6.003616320573028,
+          "p90_abs_depth_error_m": 6.731835632026196
+        },
+        {
+          "scale": 0.01,
+          "valid_pixels": 7863,
+          "median_abs_depth_error_m": 0.530826516598463,
+          "mean_abs_depth_error_m": 0.5453217765058777,
+          "p90_abs_depth_error_m": 0.6118356320261956
+        },
+        {
+          "scale": 0.001,
+          "valid_pixels": 7863,
+          "median_abs_depth_error_m": 0.0005169127583503769,
+          "mean_abs_depth_error_m": 0.000533921134668224,
+          "p90_abs_depth_error_m": 0.0009242433488368993
+        },
+        {
+          "scale": 0.0001,
+          "valid_pixels": 7863,
+          "median_abs_depth_error_m": 0.05386532027125358,
+          "mean_abs_depth_error_m": 0.05509062334150891,
+          "p90_abs_depth_error_m": 0.062036577236652374
+        },
+        {
+          "scale": 1e-05,
+          "valid_pixels": 7863,
+          "median_abs_depth_error_m": 0.059184961322546005,
+          "mean_abs_depth_error_m": 0.06054891788557606,
+          "p90_abs_depth_error_m": 0.06817089321565628
+        }
+      ]
+    }
+  ]
+}

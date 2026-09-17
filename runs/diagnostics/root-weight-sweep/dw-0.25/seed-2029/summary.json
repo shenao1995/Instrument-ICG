@@ -1,0 +1,43 @@
+{
+  "frames": 1,
+  "optimized": 1,
+  "skipped_out_of_fov": 0,
+  "mean_time_s": 0.8005247999972198,
+  "mean_correspondences": 725.0,
+  "dice_left_shaft": 0.980555534362793,
+  "dice_left_wrist": 0.9902518391609192,
+  "dice_left_grippers": 0.9803122878074646,
+  "dice_right_shaft": 0.99500972032547,
+  "dice_right_wrist": 0.985785961151123,
+  "dice_right_grippers": 0.9877120852470398,
+  "dice_mean": 0.9866045713424683,
+  "dice_left_mean": 0.983706553777059,
+  "dice_right_mean": 0.9895025889078776,
+  "left_translation_error_mm": 0.7342155575752258,
+  "left_rotation_error_deg": 0.31278666853904724,
+  "left_joints_mae_deg": 1.1383649507479277e-06,
+  "right_translation_error_mm": 0.5784103870391846,
+  "right_rotation_error_deg": 0.5934728980064392,
+  "right_joints_mae_deg": 1.4229561884349096e-07,
+  "initial_dice_mean": 0.9091617266337076,
+  "initial_left_translation_error_mm": 0.7684609889984131,
+  "initial_left_rotation_error_deg": 1.5195549726486206,
+  "initial_left_joints_mae_deg": 1.1383649507479277e-06,
+  "initial_right_translation_error_mm": 0.1511029601097107,
+  "initial_right_rotation_error_deg": 0.567862331867218,
+  "initial_right_joints_mae_deg": 1.4229561884349096e-07,
+  "mean_region_correspondences": 149.0,
+  "mean_depth_correspondences": 576.0,
+  "timing_mean_s": {
+    "total_s": 0.5982493000046816,
+    "render_s": 0.027629399992292747,
+    "correspondence_s": 0.33807500000693835,
+    "solve_s": 0.21979559998726472
+  },
+  "elapsed_s": 1.5370404999994207,
+  "method": "icgplus",
+  "output": "runs\\diagnostics\\root-weight-sweep\\dw-0.25\\seed-2029",
+  "runs": [
+    "run_1789376009_gpu1_env0"
+  ]
+}
