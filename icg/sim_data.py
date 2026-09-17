@@ -55,15 +55,25 @@ def load_intrinsics(run, instrument, camera, size):
     path = Path(run) / "camera_intrinsics.json"
     if not path.exists():
         path = Path(instrument) / "camera_intrinsics.json"
+
     entry = json.loads(path.read_text(encoding="utf-8"))[camera]
     k = np.asarray(entry["K"], np.float64)
+
     source_w, source_h = entry["resolution"]
+
+    # IMPORTANT:
+    # This simulated dataset uses an image-centred principal point
+    # for the rendering / mask convention.
     k[0, 2], k[1, 2] = (source_w - 1) / 2, (source_h - 1) / 2
+
     sx, sy = size[1] / source_w, size[0] / source_h
+
     k[0] *= sx
     k[1] *= sy
+
     k[0, 2] += (sx - 1) / 2
     k[1, 2] += (sy - 1) / 2
+
     return k.astype(np.float32), (source_h, source_w)
 
 

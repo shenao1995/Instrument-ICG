@@ -16,7 +16,8 @@ from PIL import Image
 import torch
 
 from icg.geometry import ROOT, InstrumentMesh, SemanticRenderer, instruments_json
-from icg.metrics import CHANNEL_NAMES
+from icg.metrics import CHANNEL_NAMES, pose_error_dict
+from icg.optimizer import LMConfig
 from icg.parameterization import initialize_pose
 from icg.sim_data import CONVENTION, iter_frames, list_runs, PoseConverter
 from icg.tracker import InstrumentTracker
@@ -39,9 +40,37 @@ def build_parser():
                    help="icg: single-region 6DoF, joints frozen; icgplus: multi-region; mbicg: kinematic 9DoF")
     p.add_argument("--observation", choices=("mask", "histogram"), default="mask",
                    help="mask uses GT semantics as the region posterior; histogram is classic ICG color stats")
-    p.add_argument("--texture", action="store_true", help="ICG+ ORB texture modality")
-    p.add_argument("--iterations", type=int, default=6, help="Newton correspondence iterations per frame")
+    p.add_argument("--texture", action="store_true", help="Reserved legacy flag; unavailable in Region-only LM")
+    p.add_argument("--corr-iterations", "--iterations", dest="corr_iterations", type=int, default=4,
+                   help="Outer correspondence iterations; 0 evaluates the initial pose only")
+    p.add_argument("--update-iterations", type=int, default=2, help="LM updates per fixed correspondence set")
+    p.add_argument("--lm-lambda", type=float, default=1e-2)
+    p.add_argument("--lm-lambda-min", type=float, default=1e-8)
+    p.add_argument("--lm-lambda-max", type=float, default=1e8)
+    p.add_argument("--lm-max-retries", type=int, default=5, help="Retries after the initial LM attempt")
+    p.add_argument("--huber-delta-px", type=float, default=2.)
+    p.add_argument("--region-sigma-px", type=float, nargs="+", default=[25., 15., 10.],
+                   help="Existing Region likelihood sigma per outer iteration (last value repeated)")
+    p.add_argument("--max-rotation-step-deg", type=float, default=3.)
+    p.add_argument("--max-translation-step-mm", type=float, default=2.)
+    p.add_argument("--max-joint-step-deg", type=float, default=3.)
+    p.add_argument("--tikhonov-rotation", type=float, default=100.)
+    p.add_argument("--tikhonov-translation", type=float, default=1000.)
+    p.add_argument("--tikhonov-joint", type=float, default=50.)
+    p.add_argument("--early-stop-cost-rel", type=float, default=1e-4)
+    p.add_argument("--early-stop-translation-mm", type=float, default=.05)
+    p.add_argument("--early-stop-rotation-deg", type=float, default=.02)
+    p.add_argument("--early-stop-joint-deg", type=float, default=.02)
+    p.add_argument("--early-stop-patience", type=int, default=2)
+    p.add_argument("--min-correspondences", type=int, default=30)
     p.add_argument("--n-lines", type=int, default=180, help="Correspondence lines per frame (split across regions)")
+    p.add_argument(
+        "--scales",
+        type=int,
+        nargs="+",
+        default=[1, 1, 1, 1],
+        help="Histogram correspondence scales; mask observation always uses scale=1"
+    )
     p.add_argument("--runs", nargs="*", default=())
     p.add_argument("--num-samples", "--max-runs", type=int, default=0, dest="max_runs")
     p.add_argument("--start-frame", type=int, default=0)
@@ -119,14 +148,19 @@ def summarize(rows):
         "frames": len(rows),
         "optimized": sum(1 for row in rows if row.get("optimized")),
         "skipped_out_of_fov": sum(1 for row in rows if row.get("skipped") == "out_of_fov"),
-        "mean_time_s": mean_or_none([row.get("time_s") for row in rows if row.get("optimized")]),
-        "mean_correspondences": mean_or_none([row.get("correspondences") for row in rows if row.get("optimized")]),
+        "mean_time_s": mean_or_none([row.get("time_s") for row in rows if not row.get("skipped")]),
+        "mean_correspondences": mean_or_none([row.get("correspondences") for row in rows if not row.get("skipped")]),
     }
     for name in CHANNEL_NAMES + ("mean", "left_mean", "right_mean"):
-        summary[f"dice_{name}"] = mean_or_none([row.get("dice", {}).get(name) for row in rows if row.get("optimized")])
+        summary[f"dice_{name}"] = mean_or_none([row.get("dice", {}).get(name) for row in rows if not row.get("skipped")])
     for arm in ARM_NAMES:
         for key in (f"{arm}_translation_error_mm", f"{arm}_rotation_error_deg", f"{arm}_joints_mae_deg"):
-            summary[key] = mean_or_none([row.get("pose_error", {}).get(key) for row in rows if row.get("optimized")])
+            summary[key] = mean_or_none([row.get("pose_error", {}).get(key) for row in rows if not row.get("skipped")])
+    summary['initial_dice_mean'] = mean_or_none([row.get('initial_dice', {}).get('mean') for row in rows])
+    for arm in ARM_NAMES:
+        for suffix in ('translation_error_mm', 'rotation_error_deg', 'joints_mae_deg'):
+            key = f'{arm}_{suffix}'
+            summary[f'initial_{key}'] = mean_or_none([row.get('initial_pose_error', {}).get(key) for row in rows])
     return summary
 
 
@@ -184,9 +218,25 @@ def main(args):
     converter = PoseConverter(CONVENTION, args.camera, args.baseline)
     alpha_limit, jaw_limit = np.deg2rad(args.alpha_limit_deg), np.deg2rad(args.joint_limit_deg)
     tracker = InstrumentTracker(
-        renderer, method=args.method, observation=args.observation, use_texture=args.texture,
-        n_lines=args.n_lines, iterations=args.iterations,
-        alpha_limit=alpha_limit, jaw_limit=jaw_limit)
+        renderer,
+        method=args.method,
+        observation=args.observation,
+        use_texture=args.texture,
+        n_lines=args.n_lines,
+        n_corr_iterations=args.corr_iterations,
+        n_update_iterations=args.update_iterations,
+        sigma_r=args.region_sigma_px,
+        lm_config=LMConfig(**{name: getattr(args, name) for name in LMConfig.__dataclass_fields__}),
+        min_correspondences=args.min_correspondences,
+        early_stop_cost_rel=args.early_stop_cost_rel,
+        early_stop_translation_mm=args.early_stop_translation_mm,
+        early_stop_rotation_deg=args.early_stop_rotation_deg,
+        early_stop_joint_deg=args.early_stop_joint_deg,
+        early_stop_patience=args.early_stop_patience,
+        scales=tuple(args.scales),
+        alpha_limit=alpha_limit,
+        jaw_limit=jaw_limit,
+    )
     config = {**vars(args), "output": str(output), "per_run_dirs": per_run_dirs,
               "mesh_sha256": mesh.hashes, "renderer": renderer.configuration(),
               "geometry_convention": CONVENTION, "state_dim": 18}
@@ -238,7 +288,11 @@ def main(args):
                         previous_vector = None
                         first_frame = False
                         continue
+                    # GT is read only for evaluation; it never enters LM acceptance or stopping.
+                    gt_pose = {key: value.to(device) for key, value in frame.pose.items()}
+                    initial_errors = pose_error_dict(pose, gt_pose, mesh.convention.pivot, mesh.convention.shaft_offset)
                     best = tracker.refine(pose, frame)
+                    best['pose_error'] = pose_error_dict(best['pose'], gt_pose, mesh.convention.pivot, mesh.convention.shaft_offset)
                     synchronize(device)
                     if not args.no_overlays:
                         save_overlay(run_dir / "overlays" / f"{overlay_stem}.png", frame, best["result"])
@@ -246,7 +300,10 @@ def main(args):
                         (run_dir / "history" / f"{overlay_stem}.json").write_text(
                             json.dumps(jsonable(best["history"]), indent=2), encoding="utf-8")
                     record.update(
-                        optimized=True, skipped=None, time_s=time.perf_counter() - frame_start,
+                        optimized=any(u['accepted'] for c in best['history'] for u in c['updates']),
+                        skipped=None, time_s=time.perf_counter() - frame_start,
+                        initial_dice=best['initial_dice'], initial_pose_error=initial_errors,
+                        stop_reason=best['stop_reason'],
                         method=args.method, correspondences=best["correspondences"],
                         dice=best["dice"], pose_error=best["pose_error"],
                         predicted=instruments_json(best["pose"]),
@@ -266,6 +323,13 @@ def main(args):
                         f"method {args.method}",
                         flush=True,
                     )
+                    print(f"  initial/final Dice: {best['initial_dice']['mean']:.6f} -> {dice['mean']:.6f}; "
+                          f"stop={best['stop_reason']}", flush=True)
+                    for arm in ARM_NAMES:
+                        pairs = [f"{label}: {initial_errors[arm + '_' + key]:.6f} -> {errors[arm + '_' + key]:.6f}"
+                                 for key, label in (("translation_error_mm", "t_mm"),
+                                                    ("rotation_error_deg", "R_deg"), ("joints_mae_deg", "joint_deg"))]
+                        print(f"  {arm}: " + "; ".join(pairs), flush=True)
                     previous_vector = best["x"]
                     first_frame = False
             finally:

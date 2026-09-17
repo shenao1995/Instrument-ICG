@@ -59,6 +59,8 @@ def sample_correspondences(mask, xyz, part_id, posterior, n_lines=200, min_gap=3
             "n": np.array([nx, ny], np.float64),
             "xyz": np.asarray(X, np.float64),
             "part_id": pid,
+            "region_id": ("left_" if pid < 4 else "right_") +
+                         ("shaft", "wrist", "grippers", "grippers")[pid % 4],
             "observed": np.asarray(observed, np.float64),
             "weight": float(weight),
         })
@@ -82,40 +84,97 @@ def _valid_line(mask, x, y, nx, ny, run):
     return inside >= run * 0.7 and outside >= run * 0.7
 
 
-def search_contour(posterior, cx, cy, nx, ny, length=12, scale=2):
-    """Find the FG/BG crossing along the correspondence line.
-
-    Returns the 2D observed contour point and a confidence in (0, 1].
-    """
+def search_contour(
+    posterior,
+    cx,
+    cy,
+    nx,
+    ny,
+    length=12,
+    scale=1,
+):
     h, w = posterior.shape
-    half = int(length)
-    rs = np.arange(-half, half + 1, max(1, int(scale)), dtype=np.float64)
+
+    radius = int(length)
+    step = max(1, int(scale))
+
+    rs = np.arange(
+        -radius,
+        radius + 1,
+        step,
+        dtype=np.float64,
+    )
+
     values = []
     coords = []
+    valid_rs = []
+
     for r in rs:
-        x, y = cx + nx * r, cy + ny * r
-        xi, yi = int(round(x)), int(round(y))
+        x = cx + nx * r
+        y = cy + ny * r
+
+        xi = int(round(x))
+        yi = int(round(y))
+
         if not (0 <= xi < w and 0 <= yi < h):
             continue
+
         values.append(float(posterior[yi, xi]))
         coords.append(np.array([x, y], np.float64))
+        valid_rs.append(float(r))
+
     if len(values) < 4:
         return None, 0.0
-    values = np.asarray(values, np.float64)
-    # Outward: posterior should drop through 0.5.
-    crossing = None
+
+    values = np.asarray(values)
+    valid_rs = np.asarray(valid_rs)
+
+    candidates = []
+
     for i in range(len(values) - 1):
-        a, b = values[i], values[i + 1]
-        if (a - 0.5) * (b - 0.5) <= 0 and abs(b - a) > 1e-6:
+        a = values[i]
+        b = values[i + 1]
+
+        # outward normal:
+        # correct transition must be foreground -> background
+        if a >= 0.5 and b < 0.5:
+            if abs(b - a) < 1e-6:
+                continue
+
             t = (0.5 - a) / (b - a)
-            crossing = coords[i] * (1 - t) + coords[i + 1] * t
-            confidence = min(1.0, abs(b - a) * 2.0)
-            return crossing, max(0.15, confidence)
-    # Fallback: location closest to 0.5.
-    i = int(np.argmin(np.abs(values - 0.5)))
-    if abs(values[i] - 0.5) > 0.35:
+
+            crossing = (
+                coords[i] * (1.0 - t)
+                + coords[i + 1] * t
+            )
+
+            r_cross = (
+                valid_rs[i] * (1.0 - t)
+                + valid_rs[i + 1] * t
+            )
+
+            candidates.append(
+                (abs(r_cross), crossing, r_cross)
+            )
+
+    if not candidates:
         return None, 0.0
-    return coords[i], 0.25
+
+    # choose crossing nearest current predicted contour
+    candidates.sort(key=lambda x: x[0])
+
+    distance, crossing, _ = candidates[0]
+
+    # reject very remote correspondence
+    if distance > 12.0:
+        return None, 0.0
+
+    confidence = max(
+        0.15,
+        1.0 - distance / 12.0,
+    )
+
+    return crossing, confidence
 
 
 def _thin(lines, min_gap):

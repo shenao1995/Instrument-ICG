@@ -65,6 +65,68 @@ def _wrist_local(xyz, rotation, translation):
     return rotation.T @ (np.asarray(xyz, np.float64).reshape(3) - translation)
 
 
+def camera_to_part_local(xyz, part_id, rotation, translation, joints, pivot, shaft_offset):
+    """Inverse of the existing FK; coordinates are in the canonical rigid CAD part."""
+    wrist = _wrist_local(xyz, np.asarray(rotation, np.float64),
+                         np.asarray(translation, np.float64))
+    part = int(part_id) % 4
+    alpha, theta_l, theta_r = joints
+    if part == PART_SHAFT:
+        return rotation_y(-alpha).T @ wrist + np.array([shaft_offset, 0., 0.])
+    if part == PART_WRIST:
+        return wrist
+    angle = theta_l if part == PART_JAW_L else -theta_r
+    return rotation_z(angle).T @ (wrist - np.array([pivot, 0., 0.]))
+
+
+def point_and_jacobian_from_local(local_xyz, part_id, rotation, translation, joints,
+                                  pivot, shaft_offset, optimize_joints=True):
+    """Return X_camera and its (3,9) model-frame tangent Jacobian at THIS pose.
+
+    The supplied local surface point is fixed, including during LM retries.
+    """
+    x = np.asarray(local_xyz, np.float64).reshape(3)
+    rotation = np.asarray(rotation, np.float64).reshape(3, 3)
+    translation = np.asarray(translation, np.float64).reshape(3)
+    alpha, theta_l, theta_r = joints
+    part = int(part_id) % 4
+    jac = np.zeros((3, ARM_DIM), np.float64)
+    if part == PART_SHAFT:
+        shifted = x - np.array([shaft_offset, 0., 0.])
+        wrist = rotation_y(-alpha) @ shifted
+        jac[:, 6] = rotation @ (-d_rotation_y(-alpha) @ shifted)
+    elif part == PART_WRIST:
+        wrist = x
+    else:
+        angle, sign, column = (theta_l, 1., 7) if part == PART_JAW_L else (-theta_r, -1., 8)
+        wrist = rotation_z(angle) @ x + np.array([pivot, 0., 0.])
+        jac[:, column] = rotation @ (sign * d_rotation_z(angle) @ x)
+    jac[:, :3] = -rotation @ skew(wrist)
+    jac[:, 3:6] = rotation
+    if not optimize_joints:
+        jac[:, 6:] = 0.
+    return rotation @ wrist + translation, jac
+
+
+def part_local_to_camera(local_xyz, part_id, rotation, translation, joints, pivot, shaft_offset):
+    return point_and_jacobian_from_local(local_xyz, part_id, rotation, translation,
+                                         joints, pivot, shaft_offset)[0]
+
+
+def transform_part_point(local_xyz, part_id, rotations, translations, joints, pivot, shaft_offset,
+                         optimize_joints=True):
+    """Return a fixed surface point and its full (3,18) dual-arm Jacobian."""
+    if not 0 <= int(part_id) < N_ARMS * 4:
+        raise ValueError(f"Invalid part_id: {part_id}")
+    arm = int(part_id) // 4
+    xyz, block = point_and_jacobian_from_local(
+        local_xyz, part_id, rotations[arm], translations[arm], joints[arm],
+        pivot, shaft_offset, optimize_joints)
+    jac = np.zeros((3, STATE_DIM), np.float64)
+    jac[:, arm * ARM_DIM:(arm + 1) * ARM_DIM] = block
+    return xyz, jac
+
+
 def point_jacobian(xyz, part_id, rotation, translation, joints, pivot, shaft_offset, optimize_joints):
     """Camera-space Jacobian of a rigid-body point wrt one instrument's 9-vector.
 
