@@ -23,7 +23,7 @@ def assemble_normal(lines, rotations, translations, joints, k, pivot, shaft_offs
     inv_var = 1.0 / max(sigma * sigma, 1e-8)
 
     def add_residual(xyz, part_id, observed, normal, weight):
-        nonlocal used
+        nonlocal g, h, used
         if part_id is None:
             # Texture 3D points are in the previous camera frame; treat as wrist-attached
             # on the nearest instrument by x-coordinate of the projection.
