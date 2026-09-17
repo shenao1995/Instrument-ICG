@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from icg.kinematics import (ARM_DIM, STATE_DIM, apply_increment, camera_to_part_local,
-                            projection_jacobian, transform_part_point)
+                            projection_jacobian, transform_part_point, batch_points_and_jacobians_from_local)
 
 
 @dataclass(frozen=True)
@@ -125,6 +125,90 @@ def evaluate_region(lines, state, k, pivot, shaft_offset, optimize_joints=True,
     return g, h, stats
 
 
+
+def depth_residual_and_jacobian(line, state, pivot, shaft_offset, optimize_joints=True):
+    """Point-to-plane residual in metres; observed XYZ and camera normal are fixed."""
+    xyz, jac_x = transform_part_point(line['local_xyz'], line['part_id'], *state,
+                                      pivot, shaft_offset, optimize_joints)
+    if not np.all(np.isfinite(xyz)) or xyz[2] <= 1e-6:
+        raise ValueError('Invalid candidate depth projection')
+    return float(line['normal'] @ (xyz - line['observed_xyz'])), line['normal'] @ jac_x
+
+
+def evaluate_depth(lines, state, pivot, shaft_offset, optimize_joints=True,
+                   sigma_m=.002, huber_delta_m=.002):
+    if not all(np.isfinite(v) and v > 0 for v in (sigma_m,huber_delta_m)):
+        raise ValueError('Depth sigma and Huber delta must be positive metres')
+    r=np.zeros(len(lines),np.float64)
+    j=np.zeros((len(lines),STATE_DIM),np.float64)
+    ids=np.array([line['part_id'] for line in lines],np.int64)
+    if np.any((ids<0)|(ids>=8)):
+        raise ValueError('Invalid depth part_id')
+    for pid in np.unique(ids):
+        selected=np.flatnonzero(ids==pid)
+        local=np.stack([lines[i]['local_xyz'] for i in selected])
+        observed=np.stack([lines[i]['observed_xyz'] for i in selected])
+        normal=np.stack([lines[i]['normal'] for i in selected])
+        arm=int(pid)//4
+        xyz,jac=batch_points_and_jacobians_from_local(local,pid,state[0][arm],state[1][arm],state[2][arm],
+                                                     pivot,shaft_offset,optimize_joints)
+        if not np.all(np.isfinite(xyz)) or np.any(xyz[:,2]<=1e-6):
+            raise ValueError('Invalid candidate depth projection')
+        r[selected]=np.einsum('ni,ni->n',normal,xyz-observed)
+        j[selected,arm*ARM_DIM:(arm+1)*ARM_DIM]=np.einsum('ni,nij->nj',normal,jac)
+    weights=np.array([line['weight'] for line in lines],np.float64)/sigma_m**2
+    rho,irls=huber(r,huber_delta_m)
+    absolute_mm=np.abs(r)*1000.
+    stats=dict(raw_cost=float(.5*np.sum(weights*r*r)),robust_cost=float(np.sum(weights*rho)),
+               mean_abs_mm=float(absolute_mm.mean()) if len(r) else None,
+               median_abs_mm=float(np.median(absolute_mm)) if len(r) else None,
+               p90_abs_mm=float(np.percentile(absolute_mm,90)) if len(r) else None,
+               max_abs_mm=float(absolute_mm.max()) if len(r) else None)
+    weighted=weights*irls
+    g=j.T@(weighted*r)
+    h=j.T@(weighted[:,None]*j)
+    if not np.all(np.isfinite(g)) or not np.all(np.isfinite(h)) or not np.isfinite(stats['robust_cost']):
+        raise ValueError('Non-finite Depth system')
+    return g,h,stats
+
+
+def empty_residual_stats(unit):
+    return dict(raw_cost=0.,robust_cost=0.,**{f'{name}_abs_{unit}':None for name in ('mean','median','p90','max')})
+
+
+def evaluate_modalities(lines, depth_lines, state, k, pivot, shaft_offset, optimize_joints=True,
+                        huber_delta_px=2., sigma_px=1., depth_sigma_m=.002, depth_huber_delta_m=.002,
+                        use_region=True, use_depth=False, region_weight=1., depth_weight=1.):
+    """Single shared normal equation and acceptance objective; disabled terms are not evaluated."""
+    if not all(np.isfinite(v) and v>=0 for v in (region_weight,depth_weight)):
+        raise ValueError('Modality weights must be finite and nonnegative')
+    if not ((use_region and region_weight>0) or (use_depth and depth_weight>0)):
+        raise ValueError('At least one enabled modality must have positive weight')
+    g=np.zeros(STATE_DIM)
+    h=np.zeros((STATE_DIM,STATE_DIM))
+    region,depth=empty_residual_stats('px'),empty_residual_stats('mm')
+    if use_region and region_weight>0:
+        gr,hr,region=evaluate_region(lines,state,k,pivot,shaft_offset,optimize_joints,huber_delta_px,sigma_px)
+        g+=region_weight*gr
+        h+=region_weight*hr
+    if use_depth and depth_weight>0:
+        gd,hd,depth=evaluate_depth(depth_lines,state,pivot,shaft_offset,optimize_joints,depth_sigma_m,depth_huber_delta_m)
+        g+=depth_weight*gd
+        h+=depth_weight*hd
+    stats=dict(region=region,depth=depth,
+               robust_cost=region_weight*region['robust_cost']+depth_weight*depth['robust_cost'],
+               raw_cost=region_weight*region['raw_cost']+depth_weight*depth['raw_cost'])
+    return g,h,stats
+
+
+def modality_history(before, after):
+    return dict(total_cost_before=before['robust_cost'],total_cost_after=after['robust_cost'],
+                region_cost_before=before['region']['robust_cost'],region_cost_after=after['region']['robust_cost'],
+                depth_cost_before=before['depth']['robust_cost'],depth_cost_after=after['depth']['robust_cost'],
+                region_residual_before=before['region'],region_residual_after=after['region'],
+                depth_residual_before=before['depth'],depth_residual_after=after['depth'],
+                depth_residual=after['depth'])
+
 def clip_step(delta, config):
     """Independent rotation/translation norm caps and scalar joint caps per arm."""
     blocks = np.array(delta, dtype=np.float64, copy=True).reshape(-1, ARM_DIM)
@@ -153,14 +237,20 @@ def step_statistics(delta):
 
 
 def lm_update(lines, state, k, pivot, shaft_offset, config, lm_lambda,
-              alpha_limit, jaw_limit, optimize_joints=True, sigma_px=1.0):
+              alpha_limit, jaw_limit, optimize_joints=True, sigma_px=1.0, *,
+              depth_lines=(), use_region=True, use_depth=False, region_weight=1., depth_weight=1.,
+              depth_sigma_m=.002, depth_huber_delta_m=.002):
     """One accepted inner update or a rollback; all attempts share observations.
 
-    Cost is sum(weight * Huber(r_px)) / sigma_px**2; Tikhonov regularizes only the step.
+    Cost is the weighted sum of enabled, sigma-normalized robust modalities.
+    Region uses pixels; Depth uses metres. Tikhonov regularizes only the step.
     The diagonal LM damping is separate from that Tikhonov matrix.
     """
-    g, h, before = evaluate_region(lines, state, k, pivot, shaft_offset,
-                                    optimize_joints, config.huber_delta_px, sigma_px)
+    def evaluate(candidate_state):
+        return evaluate_modalities(lines,depth_lines,candidate_state,k,pivot,shaft_offset,
+                                   optimize_joints,config.huber_delta_px,sigma_px,depth_sigma_m,depth_huber_delta_m,
+                                   use_region,use_depth,region_weight,depth_weight)
+    g, h, before = evaluate(state)
     diagonal = np.maximum(np.diag(h), 1e-12)
     tikhonov = np.tile([config.tikhonov_rotation] * 3 +
                        [config.tikhonov_translation] * 3 + [config.tikhonov_joint] * 3, 2)
@@ -168,7 +258,8 @@ def lm_update(lines, state, k, pivot, shaft_offset, config, lm_lambda,
     info = dict(cost_before=before['robust_cost'], cost_after=before['robust_cost'],
                 raw_cost_before=before['raw_cost'], raw_cost_after=before['raw_cost'],
                 accepted=False, lm_lambda_before=lm_lambda, lm_lambda_after=lm_lambda,
-                lm_retries=0, residual_before=before, residual_after=before, attempts=[],
+                lm_retries=0, residual_before=before['region'], residual_after=before['region'], attempts=[],
+                **modality_history(before,before),
                 **step_statistics(np.zeros(STATE_DIM)))
     for attempt in range(config.lm_max_retries + 1):
         matrix = h + np.diag(lm_lambda * diagonal + tikhonov)
@@ -188,8 +279,7 @@ def lm_update(lines, state, k, pivot, shaft_offset, config, lm_lambda,
             # Log the actual constrained step, including joint-bound clamping.
             delta.reshape(2, ARM_DIM)[:, 6:] = candidate[2] - state[2]
             try:
-                _, _, candidate_stats = evaluate_region(
-                    lines, candidate, k, pivot, shaft_offset, optimize_joints, config.huber_delta_px, sigma_px)
+                _, _, candidate_stats = evaluate(candidate)
                 candidate_cost = candidate_stats['robust_cost']
             except ValueError:
                 pass  # invalid projection -> reject the entire candidate
@@ -201,7 +291,8 @@ def lm_update(lines, state, k, pivot, shaft_offset, config, lm_lambda,
         if accepted:
             lm_lambda = max(config.lm_lambda_min, lm_lambda * .5)
             info.update(cost_after=candidate_cost, raw_cost_after=candidate_stats['raw_cost'],
-                        accepted=True, lm_lambda_after=lm_lambda, residual_after=candidate_stats,
+                        accepted=True, lm_lambda_after=lm_lambda, residual_after=candidate_stats['region'],
+                        **modality_history(before,candidate_stats),
                         **step_statistics(delta))
             return candidate, lm_lambda, info
         previous_lambda = lm_lambda

@@ -113,6 +113,35 @@ def part_local_to_camera(local_xyz, part_id, rotation, translation, joints, pivo
                                          joints, pivot, shaft_offset)[0]
 
 
+def batch_points_and_jacobians_from_local(local_xyz, part_id, rotation, translation, joints,
+                                           pivot, shaft_offset, optimize_joints=True):
+    """Vectorized scalar FK/Jacobian for points on ONE rigid part; no convention change."""
+    x = np.asarray(local_xyz, np.float64).reshape(-1, 3)
+    rotation = np.asarray(rotation, np.float64)
+    part = int(part_id) % 4
+    alpha, theta_l, theta_r = joints
+    jac = np.zeros((len(x), 3, ARM_DIM), np.float64)
+    if part == PART_SHAFT:
+        shifted = x - np.array([shaft_offset, 0., 0.])
+        wrist = shifted @ rotation_y(-alpha).T
+        jac[:, :, 6] = (shifted @ (-d_rotation_y(-alpha)).T) @ rotation.T
+    elif part == PART_WRIST:
+        wrist = x
+    else:
+        angle, sign, column = (theta_l, 1., 7) if part == PART_JAW_L else (-theta_r, -1., 8)
+        wrist = x @ rotation_z(angle).T + np.array([pivot, 0., 0.])
+        jac[:, :, column] = (x @ (sign * d_rotation_z(angle)).T) @ rotation.T
+    skew_batch = np.zeros((len(x), 3, 3), np.float64)
+    skew_batch[:, 0, 1], skew_batch[:, 0, 2] = -wrist[:, 2], wrist[:, 1]
+    skew_batch[:, 1, 0], skew_batch[:, 1, 2] = wrist[:, 2], -wrist[:, 0]
+    skew_batch[:, 2, 0], skew_batch[:, 2, 1] = -wrist[:, 1], wrist[:, 0]
+    jac[:, :, :3] = -np.einsum('ij,njk->nik', rotation, skew_batch)
+    jac[:, :, 3:6] = rotation
+    if not optimize_joints:
+        jac[:, :, 6:] = 0.
+    return wrist @ rotation.T + np.asarray(translation), jac
+
+
 def transform_part_point(local_xyz, part_id, rotations, translations, joints, pivot, shaft_offset,
                          optimize_joints=True):
     """Return a fixed surface point and its full (3,18) dual-arm Jacobian."""

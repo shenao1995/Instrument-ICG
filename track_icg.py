@@ -18,6 +18,7 @@ import torch
 from icg.geometry import ROOT, InstrumentMesh, SemanticRenderer, instruments_json
 from icg.metrics import CHANNEL_NAMES, pose_error_dict
 from icg.optimizer import LMConfig
+from icg.depth_modality import DepthConfig, depth_alignment_statistics
 from icg.parameterization import initialize_pose
 from icg.sim_data import CONVENTION, iter_frames, list_runs, PoseConverter
 from icg.tracker import InstrumentTracker
@@ -40,7 +41,26 @@ def build_parser():
                    help="icg: single-region 6DoF, joints frozen; icgplus: multi-region; mbicg: kinematic 9DoF")
     p.add_argument("--observation", choices=("mask", "histogram"), default="mask",
                    help="mask uses GT semantics as the region posterior; histogram is classic ICG color stats")
-    p.add_argument("--texture", action="store_true", help="Reserved legacy flag; unavailable in Region-only LM")
+    region_flags=p.add_mutually_exclusive_group()
+    region_flags.add_argument('--use-region',dest='use_region',action='store_true')
+    region_flags.add_argument('--no-region',dest='use_region',action='store_false')
+    depth_flags=p.add_mutually_exclusive_group()
+    depth_flags.add_argument('--use-depth',dest='use_depth',action='store_true')
+    depth_flags.add_argument('--no-depth',dest='use_depth',action='store_false')
+    p.set_defaults(use_region=True,use_depth=True)
+    p.add_argument('--depth-scale',type=float,default=None,
+                   help='Required explicitly for depth; inspect PNG units using tools/inspect_depth.py')
+    p.add_argument('--depth-max-points',type=int,default=100,help='Maximum surface samples per semantic region')
+    p.add_argument('--depth-search-radius-px',type=int,default=5)
+    p.add_argument('--depth-max-distance-mm',type=float,default=5.)
+    p.add_argument('--depth-sigma-mm',type=float,default=2.)
+    p.add_argument('--depth-huber-delta-mm',type=float,default=2.)
+    p.add_argument('--depth-visibility-tol-mm',type=float,default=1.)
+    p.add_argument('--depth-min-correspondences',type=int,default=30)
+    p.add_argument('--depth-occlusion-threshold-mm','--occlusion-threshold-mm',type=float,default=5.)
+    p.add_argument('--region-weight',type=float,default=1.)
+    p.add_argument('--depth-weight',type=float,default=1.)
+    p.add_argument("--texture", action="store_true", help="Reserved legacy flag; unavailable in Region/Depth LM")
     p.add_argument("--corr-iterations", "--iterations", dest="corr_iterations", type=int, default=4,
                    help="Outer correspondence iterations; 0 evaluates the initial pose only")
     p.add_argument("--update-iterations", type=int, default=2, help="LM updates per fixed correspondence set")
@@ -161,6 +181,10 @@ def summarize(rows):
         for suffix in ('translation_error_mm', 'rotation_error_deg', 'joints_mae_deg'):
             key = f'{arm}_{suffix}'
             summary[f'initial_{key}'] = mean_or_none([row.get('initial_pose_error', {}).get(key) for row in rows])
+    for name in ('region_correspondences','depth_correspondences'):
+        summary['mean_'+name]=mean_or_none([row.get(name) for row in rows])
+    summary['timing_mean_s']={name:mean_or_none([row.get('timing',{}).get(name) for row in rows])
+                              for name in ('total_s','render_s','correspondence_s','solve_s')}
     return summary
 
 
@@ -193,6 +217,11 @@ def write_csv(path, rows):
 
 
 def main(args):
+    use_depth=args.use_depth and args.depth_weight>0
+    if use_depth and (args.depth_scale is None or not np.isfinite(args.depth_scale) or args.depth_scale<=0):
+        raise ValueError('Explicit --depth-scale required. Run tools/inspect_depth.py first, or use --no-depth for Region-only.')
+    if not ((args.use_region and args.region_weight>0) or use_depth):
+        raise ValueError('Enable at least one positive-weight modality')
     if min(args.height, args.width) < 32 or args.height % 2 or args.width % 2:
         raise ValueError("height/width must be even and >= 32")
     device = torch.device(args.device)
@@ -223,6 +252,15 @@ def main(args):
         observation=args.observation,
         use_texture=args.texture,
         n_lines=args.n_lines,
+        use_region=args.use_region,use_depth=args.use_depth,
+        region_weight=args.region_weight,depth_weight=args.depth_weight,
+        depth_config=DepthConfig(max_points_per_region=args.depth_max_points,
+                                 search_radius_px=args.depth_search_radius_px,
+                                 max_distance_mm=args.depth_max_distance_mm,
+                                 sigma_mm=args.depth_sigma_mm,huber_delta_mm=args.depth_huber_delta_mm,
+                                 visibility_tol_mm=args.depth_visibility_tol_mm,
+                                 min_correspondences=args.depth_min_correspondences,
+                                 occlusion_threshold_mm=args.depth_occlusion_threshold_mm),
         n_corr_iterations=args.corr_iterations,
         n_update_iterations=args.update_iterations,
         sigma_r=args.region_sigma_px,
@@ -263,7 +301,7 @@ def main(args):
             try:
                 for frame in iter_frames(run, converter, args.camera, size, args.instrument,
                                          frame_stride=args.frame_stride, limit=args.limit,
-                                         start=args.start_frame):
+                                         start=args.start_frame, depth_scale=args.depth_scale if use_depth else None):
                     synchronize(device)
                     frame_start = time.perf_counter()
                     use_previous = args.track and args.init == "perturb-gt" and not first_frame and previous_vector is not None
@@ -303,7 +341,10 @@ def main(args):
                         optimized=any(u['accepted'] for c in best['history'] for u in c['updates']),
                         skipped=None, time_s=time.perf_counter() - frame_start,
                         initial_dice=best['initial_dice'], initial_pose_error=initial_errors,
-                        stop_reason=best['stop_reason'],
+                        stop_reason=best['stop_reason'],timing=best['timing'],
+                        region_correspondences=best['region_correspondences'],depth_correspondences=best['depth_correspondences'],
+                        region_residual=best['region_residual'],depth_residual=best['depth_residual'],
+                        depth_alignment=depth_alignment_statistics(frame.depth,best['result'],frame.mask) if use_depth else None,
                         method=args.method, correspondences=best["correspondences"],
                         dice=best["dice"], pose_error=best["pose_error"],
                         predicted=instruments_json(best["pose"]),
@@ -323,6 +364,15 @@ def main(args):
                         f"method {args.method}",
                         flush=True,
                     )
+                    print(f"  region corr: {best['region_correspondences']}  depth corr: {best['depth_correspondences']}  "
+                          f"region residual: {best['region_residual'].get('mean_abs_px')} px  "
+                          f"depth residual: {best['depth_residual'].get('mean_abs_mm')} mm",flush=True)
+                    print(f"  total time: {record['time_s']:.4f}s  render: {best['timing']['render_s']:.4f}s  "
+                          f"correspondence: {best['timing']['correspondence_s']:.4f}s  solve: {best['timing']['solve_s']:.4f}s",flush=True)
+                    if record['depth_alignment']:
+                        a=record['depth_alignment']
+                        print(f"  observed/CAD depth alignment: median={a['median_abs_depth_error_m']} m, "
+                              f"p90={a['p90_abs_depth_error_m']} m, valid={a['valid_pixels']}",flush=True)
                     print(f"  initial/final Dice: {best['initial_dice']['mean']:.6f} -> {dice['mean']:.6f}; "
                           f"stop={best['stop_reason']}", flush=True)
                     for arm in ARM_NAMES:

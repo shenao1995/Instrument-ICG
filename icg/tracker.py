@@ -1,14 +1,17 @@
 """Frame-to-frame ICG / ICG+ / Mb-ICG tracker for dual endoscopic instruments."""
 from __future__ import annotations
 
+import time
+
 import numpy as np
 import torch
 
 from icg.correspondence import sample_correspondences
+from icg.depth_modality import DepthConfig, sample_depth_correspondences
 from icg.histograms import RegionHistogram, histogram_samples, mask_posterior
 from icg.kinematics import pose_numpy
 from icg.metrics import dice_dict
-from icg.optimizer import (LMConfig, evaluate_region, freeze_correspondences, lm_update,
+from icg.optimizer import (LMConfig, evaluate_modalities, freeze_correspondences, lm_update,
                            pose_tensors_from_numpy)
 from icg.parameterization import pose_to_vector
 
@@ -28,13 +31,22 @@ class InstrumentTracker:
                  n_corr_iterations=4, n_update_iterations=2, lm_config=None,
                  min_correspondences=30, early_stop_cost_rel=1e-4,
                  early_stop_translation_mm=.05, early_stop_rotation_deg=.02,
-                 early_stop_joint_deg=.02, early_stop_patience=2):
+                 early_stop_joint_deg=.02, early_stop_patience=2,
+                 use_region=True, use_depth=False, region_weight=1., depth_weight=1., depth_config=None):
         if method not in ("icg", "icgplus", "mbicg"):
             raise ValueError(f"Unknown method {method}")
         if observation not in ("mask", "histogram"):
             raise ValueError("observation must be 'mask' or 'histogram'")
         if use_texture:
-            raise ValueError("This optimizer is Region-only; --texture is not supported in this version")
+            raise ValueError("This optimizer supports Region/Depth only; --texture is not supported")
+        if not all(np.isfinite(v) and v >= 0 for v in (region_weight,depth_weight)):
+            raise ValueError('Modality weights must be finite and nonnegative')
+        self.use_region = bool(use_region and region_weight > 0)
+        self.use_depth = bool(use_depth and depth_weight > 0)
+        if not (self.use_region or self.use_depth):
+            raise ValueError('Enable at least one modality with positive weight')
+        self.region_weight, self.depth_weight = float(region_weight),float(depth_weight)
+        self.depth_config = depth_config or DepthConfig()
         self.renderer = renderer
         self.method = method
         self.observation = observation
@@ -125,74 +137,123 @@ class InstrumentTracker:
 
     @torch.no_grad()
     def refine(self, pose, frame):
-        # This function reads only K/rgb/mask from frame; GT pose is evaluation-only
-        # in track_icg.py, outside the optimizer and all acceptance/stopping logic.
+        # No GT pose access: only K/rgb/mask/depth observations enter optimization.
         device = self.mesh.vertices.device
+        def sync():
+            if device.type == 'cuda': torch.cuda.synchronize(device)
+        sync()
+        started = time.perf_counter()
+        timing = dict(render_s=0.,correspondence_s=0.,solve_s=0.,render_calls=0)
         k = frame.K.to(device)
         k_numpy = k.detach().cpu().numpy()
         rgb = frame.rgb.detach().cpu().numpy()
-        if self.observation == "histogram" and not self._histograms_seeded:
+        if self.use_depth and getattr(frame,'depth',None) is None:
+            raise ValueError('Depth modality requires a depth observation with explicit depth scale')
+        if self.use_region and self.observation == "histogram" and not self._histograms_seeded:
             self._update_histograms(rgb, frame.mask.detach().cpu().numpy())
             self._histograms_seeded = True
-        state = tuple(np.array(v, dtype=np.float64, copy=True) for v in pose_numpy(pose))
+        state = tuple(np.array(v,dtype=np.float64,copy=True) for v in pose_numpy(pose))
         pivot, offset = self.mesh.convention.pivot, self.mesh.convention.shaft_offset
-        lm_lambda = self.lm_config.lm_lambda  # reset between frames, persist within frame
+        lm_lambda = self.lm_config.lm_lambda
         history, initial_dice = [], None
         consecutive_small = 0
+        counts_region = dict(total=0,**{name:0 for name in REGION_NAMES})
+        counts_depth = dict(counts_region)
         stop_reason = 'iteration_limit' if self.n_corr_iterations else 'no_optimization'
+
+        def render(current):
+            sync()
+            t0=time.perf_counter()
+            output=self.renderer.render_icg(current,k)
+            sync()
+            timing['render_s']+=time.perf_counter()-t0
+            timing['render_calls']+=1
+            return output
+
+        def counts(lines):
+            result=dict(total=len(lines),**{name:0 for name in REGION_NAMES})
+            for line in lines: result[line['region_id']]+=1
+            return result
+
         for corr_iteration in range(self.n_corr_iterations):
-            scale = 1 if self.observation == "mask" else self.scales[min(corr_iteration, len(self.scales)-1)]
-            sigma = self.sigma_r[min(corr_iteration, len(self.sigma_r)-1)]
-            rendered = self.renderer.render_icg(pose_tensors_from_numpy(state, pose), k)
+            scale = 1 if self.observation == 'mask' else self.scales[min(corr_iteration,len(self.scales)-1)]
+            sigma = self.sigma_r[min(corr_iteration,len(self.sigma_r)-1)]
+            rendered_pose=pose_tensors_from_numpy(state,pose)
+            rendered=render(rendered_pose)
             if initial_dice is None:
-                initial_dice = dice_dict(rendered['mask'], frame.mask.to(device)[None])
-            lines, _ = self._correspondences(rendered, rgb, frame.mask, scale)
-            # Surface XYZ is interpolated from the float32 pose actually rendered.
-            # Invert that same pose once; subsequent evaluations use the fixed local point.
-            rendered_state = pose_numpy(pose_tensors_from_numpy(state, pose))
-            fixed = freeze_correspondences(lines, rendered_state, pivot, offset)
-            counts = dict(total=len(fixed), **{name: 0 for name in REGION_NAMES})
-            for line in fixed:
-                counts[line['region_id']] += 1
-            _, _, before = evaluate_region(fixed, state, k_numpy, pivot, offset,
-                                            self.optimize_joints, self.lm_config.huber_delta_px, sigma)
-            outer = dict(corr_iteration=corr_iteration, scale=scale, residual_sigma_px=sigma,
-                         correspondences=counts, region_residual_before=before, updates=[])
+                initial_dice=dice_dict(rendered['mask'],frame.mask.to(device)[None])
+            t0=time.perf_counter()
+            rendered_state=pose_numpy(rendered_pose)
+            fixed,depth_fixed=(),()
+            if self.use_region:
+                lines,_=self._correspondences(rendered,rgb,frame.mask,scale)
+                fixed=freeze_correspondences(lines,rendered_state,pivot,offset)
+            depth_search={}
+            if self.use_depth:
+                depth_fixed,depth_search=sample_depth_correspondences(
+                    rendered,frame.depth,frame.mask,k_numpy,rendered_state,pivot,offset,self.depth_config)
+            counts_region,counts_depth=counts(fixed),counts(depth_fixed)
+            timing['correspondence_s']+=time.perf_counter()-t0
+            modality_args=dict(depth_lines=depth_fixed,use_region=self.use_region,use_depth=self.use_depth,
+                               region_weight=self.region_weight,depth_weight=self.depth_weight,
+                               depth_sigma_m=self.depth_config.sigma_mm/1000.,
+                               depth_huber_delta_m=self.depth_config.huber_delta_mm/1000.)
+            t0=time.perf_counter()
+            _,_,before=evaluate_modalities(fixed,depth_fixed,state,k_numpy,pivot,offset,self.optimize_joints,
+                                           self.lm_config.huber_delta_px,sigma,
+                                           modality_args['depth_sigma_m'],modality_args['depth_huber_delta_m'],
+                                           self.use_region,self.use_depth,self.region_weight,self.depth_weight)
+            timing['solve_s']+=time.perf_counter()-t0
+            outer=dict(corr_iteration=corr_iteration,scale=scale,residual_sigma_px=sigma,
+                       correspondences=counts_region,region_correspondences=counts_region,
+                       depth_correspondences=counts_depth,depth_search=depth_search,
+                       region_residual_before=before['region'],depth_residual_before=before['depth'],updates=[])
             history.append(outer)
-            if len(fixed) < self.min_correspondences:
-                stop_reason = outer['stop_reason'] = 'insufficient_correspondences'
+            if ((self.use_region and len(fixed)<self.min_correspondences) or
+                    (self.use_depth and len(depth_fixed)<self.depth_config.min_correspondences)):
+                stop_reason=outer['stop_reason']='insufficient_correspondences'
+                outer['insufficient_modalities']=[name for name,failed in (
+                    ('region',self.use_region and len(fixed)<self.min_correspondences),
+                    ('depth',self.use_depth and len(depth_fixed)<self.depth_config.min_correspondences)) if failed]
                 break
-            stop = False
+            stop=False
             for update_iteration in range(self.n_update_iterations):
-                state, lm_lambda, update = lm_update(
-                    fixed, state, k_numpy, pivot, offset, self.lm_config, lm_lambda,
-                    self.alpha_limit, self.jaw_limit, self.optimize_joints, sigma)
-                update['update_iteration'] = update_iteration
+                t0=time.perf_counter()
+                state,lm_lambda,update=lm_update(fixed,state,k_numpy,pivot,offset,self.lm_config,lm_lambda,
+                                                self.alpha_limit,self.jaw_limit,self.optimize_joints,sigma,**modality_args)
+                timing['solve_s']+=time.perf_counter()-t0
+                update['update_iteration']=update_iteration
                 outer['updates'].append(update)
                 if not update['accepted']:
-                    stop_reason = outer['stop_reason'] = 'no_decreasing_step'
-                    stop = True
+                    stop_reason=outer['stop_reason']='no_decreasing_step'
+                    stop=True
                     break
-                reduction = (update['cost_before'] - update['cost_after']) / max(update['cost_before'], 1e-12)
-                update['relative_cost_reduction'] = reduction
-                small = self._small_step(update) or reduction < self.early_stop_cost_rel
-                consecutive_small = consecutive_small + 1 if small else 0
-                update['early_stop_streak'] = consecutive_small
-                if consecutive_small >= self.early_stop_patience:
-                    stop_reason = outer['stop_reason'] = 'converged'
-                    stop = True
+                reduction=(update['cost_before']-update['cost_after'])/max(update['cost_before'],1e-12)
+                update['relative_cost_reduction']=reduction
+                small=self._small_step(update) or reduction<self.early_stop_cost_rel
+                consecutive_small=consecutive_small+1 if small else 0
+                update['early_stop_streak']=consecutive_small
+                if consecutive_small>=self.early_stop_patience:
+                    stop_reason=outer['stop_reason']='converged'
+                    stop=True
                     break
-            if stop:
-                break
-        pose = pose_tensors_from_numpy(state, pose)
-        rendered = self.renderer.render_icg(pose, k)
-        pred = rendered["mask"]
-        if self.observation == 'histogram':
-            self._update_histograms(rgb, pred[0].detach().cpu().numpy())
-        dice = dice_dict(pred, frame.mask.to(device)[None])
-        return {
-            "pose": pose, "x": pose_to_vector(pose), "result": rendered,
-            "dice": dice, "initial_dice": initial_dice or dice, "history": history,
-            "stop_reason": stop_reason,
-            "correspondences": history[-1]["correspondences"]['total'] if history else 0,
-        }
+            if stop: break
+        pose=pose_tensors_from_numpy(state,pose)
+        rendered=render(pose)  # final evaluation/output, never an LM-candidate render
+        pred=rendered['mask']
+        if self.use_region and self.observation=='histogram':
+            self._update_histograms(rgb,pred[0].detach().cpu().numpy())
+        dice=dice_dict(pred,frame.mask.to(device)[None])
+        if history:
+            last=history[-1]
+            region_residual=last['updates'][-1]['region_residual_after'] if last['updates'] else last['region_residual_before']
+            depth_residual=last['updates'][-1]['depth_residual_after'] if last['updates'] else last['depth_residual_before']
+        else:
+            region_residual=depth_residual={}
+        sync()
+        timing['total_s']=time.perf_counter()-started
+        return dict(pose=pose,x=pose_to_vector(pose),result=rendered,dice=dice,
+                    initial_dice=initial_dice or dice,history=history,stop_reason=stop_reason,
+                    correspondences=counts_region['total']+counts_depth['total'],
+                    region_correspondences=counts_region['total'],depth_correspondences=counts_depth['total'],
+                    region_residual=region_residual,depth_residual=depth_residual,timing=timing)

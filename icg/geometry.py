@@ -368,8 +368,10 @@ class InstrumentMesh(nn.Module):
                 except ImportError as exc:
                     raise RuntimeError("Mesh simplification requires: pip install fast-simplification") from exc
             v = np.asarray(mesh.vertices, dtype=np.float32)
+            # Geometry normals belong to the canonical, possibly simplified mesh.
+            # Their availability is independent of materials/albedo.
+            all_normals.append(np.asarray(mesh.vertex_normals, dtype=np.float32))
             if load_appearance:
-                all_normals.append(np.asarray(mesh.vertex_normals,dtype=np.float32))
                 if self.part_albedo is not None:
                     all_albedo.append(np.tile(np.asarray(self.part_albedo[part],np.float32).clip(0,1),(len(mesh.faces),1)))
                 else:
@@ -390,8 +392,8 @@ class InstrumentMesh(nn.Module):
         arm_labels = torch.cat([labels + CLASSES_PER_ARM*a for a in range(arms)])
         self.register_buffer("attributes", F.one_hot(arm_labels, self.classes).float())
         self.register_buffer("local_tips", torch.tensor(np.asarray(tips), dtype=torch.float32))
+        self.register_buffer("normals", torch.from_numpy(np.concatenate(all_normals)))
         if load_appearance:
-            self.register_buffer("normals",torch.from_numpy(np.concatenate(all_normals)))
             self.register_buffer("face_albedo",torch.from_numpy(np.concatenate(all_albedo)).repeat(arms,1))
 
     def _check_arms(self, pose):
@@ -596,9 +598,11 @@ class SemanticRenderer(nn.Module):
         attrs = self.mesh.attributes[None].contiguous()
         color, _ = self.dr.interpolate(attrs, rast, faces)
         positions, _ = self.dr.interpolate(vertices.contiguous(), rast, faces)
+        normals, _ = self.dr.interpolate(self.mesh.camera_normals(pose).contiguous(), rast, faces)
         visible = rast[..., 3:] > 0
         color = color * visible
         positions = positions * visible
+        normals = F.normalize(normals, dim=-1, eps=1e-12) * visible
         ids = []
         for arm in range(self.mesh.arms):
             for part_i, count in enumerate(self.mesh.counts):
@@ -609,15 +613,18 @@ class SemanticRenderer(nn.Module):
         part_attr = part_attr * visible
         color = color.flip(1).permute(0, 3, 1, 2).clamp(0, 1)
         xyz = positions.flip(1).permute(0, 3, 1, 2)
+        normal = normals.flip(1).permute(0, 3, 1, 2)
         part_attr = part_attr.flip(1).permute(0, 3, 1, 2)
         if self.supersample > 1:
             color = F.avg_pool2d(color, self.supersample)
             xyz = F.avg_pool2d(xyz, self.supersample)
+            normal = F.normalize(F.avg_pool2d(normal, self.supersample), dim=1, eps=1e-12)
             part_attr = F.avg_pool2d(part_attr, self.supersample)
         c = self.classes
         return {
             "mask": color[:, :c],
             "xyz": xyz,
+            "normal": normal,
             "part_id": part_attr[:, :1],
             "tips": project(tips, k[:, None]),
             "tips_camera": tips,

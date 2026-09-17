@@ -14,6 +14,7 @@ from icg.tips import extract_arm_tips
 
 CONVENTION = "simulated_dual_arm_v1"
 SOURCES = {"left": ("endo/left_endo_rgb.mp4", "mask"), "right": ("endo/right_endo_rgb.mp4", "mask_right")}
+DEPTH_SOURCES = {"left": "depth", "right": "depth_right"}
 ARM_PREFIXES = ("", "right_")
 ARM_NAMES = ("left", "right")
 DEFAULT_ALBEDO = {
@@ -156,6 +157,30 @@ class FrameSample:
     tip_confidence: torch.Tensor
     tip_scale: torch.Tensor
     source_size: tuple
+    depth: torch.Tensor | None = None  # [H,W], float32 metres; None for Region-only
+
+
+def resize_depth_to_metres(raw, size, depth_scale):
+    """Explicit units, nearest-neighbour resize, invalid samples remain invalid."""
+    if depth_scale is None or not np.isfinite(depth_scale) or depth_scale <= 0:
+        raise ValueError('Depth requires an explicit, finite positive --depth-scale; run tools/inspect_depth.py first')
+    if raw.ndim != 2:
+        raise ValueError('Depth PNG must be single-channel')
+    depth = cv2.resize(raw.astype(np.float32), size[::-1], interpolation=cv2.INTER_NEAREST)
+    valid = np.isfinite(depth) & (depth > 0)
+    depth = depth * np.float32(depth_scale)
+    depth[~valid | ~np.isfinite(depth) | (depth <= 0)] = np.nan
+    return np.ascontiguousarray(depth, dtype=np.float32)
+
+
+def load_depth(run, index, camera, size, depth_scale, source_size=None):
+    path = Path(run) / DEPTH_SOURCES[camera] / f'{index:04d}.png'
+    raw = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    if raw is None:
+        raise FileNotFoundError(f'Missing depth PNG: {path}')
+    if source_size is not None and tuple(raw.shape) != tuple(source_size):
+        raise ValueError(f'Depth shape {raw.shape} != camera source size {source_size}: {path}')
+    return torch.from_numpy(resize_depth_to_metres(raw, size, depth_scale))
 
 
 def evenly_spaced_indices(n, k):
@@ -184,7 +209,8 @@ def evenly_spaced_indices(n, k):
     return sorted(chosen)
 
 
-def iter_frames(run, converter, camera, size, instrument, frame_stride=1, limit=0, start=0):
+def iter_frames(run, converter, camera, size, instrument, frame_stride=1, limit=0, start=0,
+                depth_scale=None):
     """Yield frames from a run.
 
     When ``limit > 0``, selects that many frames **evenly spaced** across the video
@@ -237,6 +263,8 @@ def iter_frames(run, converter, camera, size, instrument, frame_stride=1, limit=
                 tip_confidence=torch.from_numpy(confidence),
                 tip_scale=torch.from_numpy(scales),
                 source_size=source_size,
+                depth=load_depth(run, index, camera, size, depth_scale, source_size)
+                      if depth_scale is not None else None,
             )
     finally:
         capture.release()
